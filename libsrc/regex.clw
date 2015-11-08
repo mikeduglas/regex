@@ -261,6 +261,8 @@ TRegExPCRE.Construct          PROCEDURE()
   ! This is a global (!) used to set the regex type (note POSIX APIs don't use global for this)
   re_set_syntax(RE_SYNTAX_EGREP)
   
+!  SELF.regex.regs_allocated = REGS_UNALLOCATED
+  
   SELF.matches &= NEW TMatchItems
 
 TRegExPCRE.Destruct           PROCEDURE()
@@ -283,12 +285,70 @@ regs                            &re_registers
   regs &= NULL
   RETURN re_search(SELF.regex, str, LEN(str), start, range, regs)
 
+!TRegExPCRE.re_match           PROCEDURE(STRING str, LONG start = 0)
+!regs                            &re_registers
+!  CODE
+!  regs &= NULL
+!  RETURN re_match(SELF.regex, str, LEN(str), start, regs)
 TRegExPCRE.re_match           PROCEDURE(STRING str, LONG start = 0)
-regs                            &re_registers
+regs                            LIKE(re_registers)
+ret                             LONG, AUTO
+rstart                          &regoff_t
+rfinish                         &regoff_t
+ndx LONG, AUTO
   CODE
-  regs &= NULL
-  RETURN re_match(SELF.regex, str, LEN(str), start, regs)
-    
+  FreeMatches(SELF.matches)
+
+  ret = re_match(SELF.regex, str, LEN(str), start, regs)
+  IF ret >= 0
+    LOOP ndx = 0 TO regs.num_regs - 1
+      rstart &= (regs.pstart + ndx * SIZE(ndx))
+      rfinish &= (regs.pend + ndx * SIZE(ndx))
+      
+      IF NOT (rstart = -1 AND rfinish = -1)
+        SELF.matches.Start = rstart + 1
+        SELF.matches.Finish = rfinish + 0
+        SELF.matches.Value &= NEW STRING(SELF.matches.Finish - SELF.matches.Start + 1)
+        SELF.matches.Value = str[SELF.matches.Start : SELF.matches.Finish]
+        ADD(SELF.matches)
+      ELSE
+        BREAK
+      END
+    END
+  END
+  
+  RETURN ret
+!TRegExPCRE.re_match           PROCEDURE(STRING str, LONG start = 0)
+!regs                            &re_registers
+!ret                             LONG, AUTO
+!rstart                          &regoff_t
+!rfinish                         &regoff_t
+!ndx                             LONG, AUTO
+!  CODE
+!  FreeMatches(SELF.matches)
+!
+!  ret = re_match(SELF.regex, str, LEN(str), start, regs)
+!  IF ret >= 0
+!    IF NOT regs &= NULL
+!      LOOP ndx = 0 TO regs.num_regs - 1
+!        rstart &= (regs.pstart + ndx * SIZE(ndx))
+!        rfinish &= (regs.pend + ndx * SIZE(ndx))
+!      
+!        IF NOT (rstart = -1 AND rfinish = -1)
+!!        SELF.matches.Value &= NEW STRING(finish - start + 1)
+!!        SELF.matches.Value = str[start : finish]
+!!        SELF.matches.Start = start
+!!        SELF.matches.Finish = finish
+!!        ADD(SELF.matches)
+!        ELSE
+!          BREAK
+!        END
+!      END
+!    END
+!  END
+!  
+!  RETURN ret
+
 TRegExPCRE.regfree            PROCEDURE()
   CODE
   regfree(SELF.regex)

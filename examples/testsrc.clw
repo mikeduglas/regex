@@ -132,20 +132,22 @@ PCRE::Test                    PROCEDURE()
 regex                           TRegExPCRE
 errstr                          STRING(80)
 ret                             LONG, AUTO
+matchIndex                      LONG, AUTO
   CODE
-!  errstr = regex.CompilePattern('^a[[:alnum:]]')
   errstr = regex.re_compile_pattern('a*')
-!  errstr = regex.CompilePattern('{{4|four}th')
+!  errstr = regex.re_compile_pattern('((a)(b))')
   IF errstr
     MESSAGE('Could not compile regex: '& CLIP(errstr))
     RETURN
   END
   
-!  ret = regex.Match('abc', 0)
-!  ret = regex.re_match('aaaaab', 2)
   ret = regex.re_match('aaaaab')
+!  ret = regex.re_match('ab')
   IF ret >= 0
     MESSAGE('Match! ret '& ret)
+    LOOP matchIndex = 1 TO regex.matchcount()
+      MESSAGE('Match #'& matchIndex &': '& regex.matchitem(matchIndex))
+    END
   ELSIF ret = -1
     MESSAGE('No match')
   ELSE
